@@ -16,7 +16,9 @@ export default function ExpenseForm() {
   });
   const [error, setError] = useState("");
 
-  const { dispatch, state } = useBudget();
+  const { dispatch, state, remainingBudget } = useBudget();
+
+  const [previusAmount, setPreviusAmount] = useState(0);
 
   useEffect(() => {
     if (state.editingId) {
@@ -24,6 +26,7 @@ export default function ExpenseForm() {
         (currentExpense) => currentExpense.id === state.editingId
       )[0];
       setExpense(editingExpense);
+      setPreviusAmount(editingExpense.amount);
     }
   }, [state.editingId]);
 
@@ -52,14 +55,28 @@ export default function ExpenseForm() {
       setError("Todos los campos son obligatorios");
       return;
     }
-    dispatch({ type: "add-expense", payload: { expense } });
+    if (remainingBudget - expense.amount + previusAmount < 0) {
+      console.log("....errorrs");
+      setError("Presupuesto sobrepasado");
+      return;
+    }
+
+    if (state.editingId) {
+      dispatch({
+        type: "update-expense",
+        payload: { expense: { id: state.editingId, ...expense } },
+      });
+    } else {
+      dispatch({ type: "add-expense", payload: { expense } });
+    }
     setExpense({ amount: 0, expenseName: "", category: "", date: new Date() });
+    setPreviusAmount(0);
   };
 
   return (
     <form action="" className="space-y-5" onSubmit={handleSubmit}>
       <legend className="uppercase text-center text-2xl font-black border-b-4 border-blue-500 py-2">
-        Nuevo gasto
+        {state.editingId ? "Editar gasto" : "Nuevo gasto"}
       </legend>
       {error && <ErrorMessage> {error}</ErrorMessage>}
       <div className="flex flex-col gap-2">
@@ -122,7 +139,7 @@ export default function ExpenseForm() {
       <input
         type="submit"
         className="bg-blue-600 cursor-pointer w-full p-2 text-white uppercase font-bold rounded-lg"
-        value="Registrar gasto"
+        value={state.editingId ? "Guardar cambio" : "Registrar gasto"}
       />
     </form>
   );
